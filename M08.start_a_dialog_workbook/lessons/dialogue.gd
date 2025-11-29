@@ -18,39 +18,48 @@ var bodies := {
 var dialogue_items: Array[Dictionary] = [
 	{
 		"expression": expressions["regular"],
-		"text": "Hey,how's your work going so far?",
-		"character": bodies["sophia"]
+		"text": "Hey, how's your work going so far?",
+		"character": bodies["sophia"],
+		"choices": {
+			"Going well": 2,
+			"Still working": 3, 
+		},
 	},
-	{
-		"expression": expressions["regular"],
-		"text": "I'm doing okay,what about you?",
-		"character": bodies["pink"]
-	},
-	{
-		"expression": expressions["sad"],
-		"text": "Well,I am still working.",
-		"character": bodies["sophia"]
-	},
+
 	{
 		"expression": expressions["sad"],
-		"text": "Oh!",
-		"character": bodies["pink"]
+		"text": "Oh, are you sure about that?",
+		"character": bodies["pink"],
+		"choices": {
+			"Ok I am coming!": 4,
+			"I am too tired": 1, 
+		},
 	},
 	{
 		"expression": expressions["happy"],
-		"text": "It's okay,keep going!",
-		"character": bodies["pink"]
+		"text": "Great! Let's have lunch together!",
+		"character": bodies["pink"],
+		"choices": {
+			"Let's go!": 4,
+			"I am too tired": 1, 
+		},
 	},
 	{
 		"expression": expressions["happy"],
-		"text": "I belive that you will be fine.",
-		"character": bodies["pink"]
+		"text": "Let's have lunch together to take a break!",
+		"character": bodies["pink"],
+		"choices": {
+			"Let's go!": 4,
+			"I am too tired": 1, 
+		},
 	},
 	{
 		"expression": expressions["happy"],
-		"text": "Thanks!",
-		"character": bodies["sophia"]
-	}
+		"text": "That's my best friend!",
+		"character": bodies["pink"],
+		"choices": {"Let's go! (Quit)": - 1},
+	},
+	
 ]
 
 ## UI element that shows the texts
@@ -62,15 +71,30 @@ var dialogue_items: Array[Dictionary] = [
 @onready var body: TextureRect = %Body
 ## The Expression
 @onready var expression: TextureRect = %Expression
+@onready var action_buttons_v_box_container: VBoxContainer = %ActionButtonsVBoxContainer
 
 
 func _ready() -> void:
 	show_text(0)
 
+func create_buttons(choices_data: Dictionary) -> void:
+		for button in action_buttons_v_box_container.get_children():
+			button.queue_free()
+		
+		for choice_text in choices_data:
+			var button := Button.new()
+			action_buttons_v_box_container.add_child(button)
+			button.text = choice_text
+			var target_line_idx: int = choices_data[choice_text]
+			if target_line_idx == - 1:
+				button.pressed.connect(get_tree().quit)
+			else:
+				button.pressed.connect(show_text.bind(target_line_idx))
 
 ## Draws the current text to the rich text element
 func show_text(current_item_index: int) -> void:
-	# We retrieve the current item from the array
+	
+	# chicken sandwich
 	var current_item := dialogue_items[current_item_index]
 	# from the item, we extract the properties.
 	# We set the text to the rich text control
@@ -78,6 +102,7 @@ func show_text(current_item_index: int) -> void:
 	rich_text_label.text = current_item["text"]
 	expression.texture = current_item["expression"]
 	body.texture = current_item["character"]
+	create_buttons(current_item["choices"])
 
 	# We set the initial visible ratio to the text to 0, so we can change it in the tween
 	rich_text_label.visible_ratio = 0.0
@@ -102,6 +127,13 @@ func show_text(current_item_index: int) -> void:
 
 	# We animate the character sliding in.
 	slide_in()
+	
+	for button: Button in action_buttons_v_box_container.get_children():
+		button.disabled = true
+	tween.finished.connect(func() -> void:
+		for button: Button in action_buttons_v_box_container.get_children():
+			button.disabled = false
+		)
 
 
 ## Animates the character when they start talking
